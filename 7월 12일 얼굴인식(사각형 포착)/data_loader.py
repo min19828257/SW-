@@ -11,14 +11,16 @@ from os.path import join
 from PIL import Image
 
 import cv2
-
+import random
 NUM_EPOCHS = 1
 loadmodel = None
 
 GPUUSE = None
 
+
 def is_image_file(filename):
     return any(filename.endswith(extension) for extension in ['bmp', '.png', '.jpg', '.jpeg', '.PNG', '.JPG', '.JPEG'])
+
 
 class Discriminator(nn.Module):
     def __init__(self):
@@ -64,6 +66,7 @@ class Discriminator(nn.Module):
     def forward(self, x):
         return F.sigmoid(self.net(x))
 
+
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
@@ -88,40 +91,39 @@ class Net(nn.Module):
         x = self.fc3(x)
         return torch.sigmoid(x)
 
-# save load 코드 예시
-#torch.save(netD.state_dict(), 'param/netD_epoch_%d.pth' % (epoch))
 
-#net.load_state_dict(torch.load(loadmodel))
+# save load 코드 예시
+# torch.save(netD.state_dict(), 'param/netD_epoch_%d.pth' % (epoch))
+
+# net.load_state_dict(torch.load(loadmodel))
 
 class DatasetFromfolder(Dataset):
-    def __init__(self, facedataset_dir, nonfacedataset_dir):
+    def __init__(self, dir_mnist):
         super(DatasetFromfolder, self).__init__()
+        #dir_mnist = 'C:\Users\Administrator\Desktop\새 폴더\SW-\7월15일 generator\4주차\mnist_png.tar\mnist_png\training'
+        self.filelist = []
+        self.lensum = 0
+        for i in range(10):
+            idir = join(dir_mnist, str(i))
+            filelist_tmp = [join(idir, x) for x in listdir(idir) if is_image_file(x)]
+            self.filelist.append((filelist_tmp, i))
+            self.lensum = self.lensum + len(filelist_tmp)
 
-        self.face_image_filenames = [join(facedataset_dir, x) for x in listdir(facedataset_dir) if is_image_file(x)]
-        self.nonface_image_filenames = [join(nonfacedataset_dir, x) for x in listdir(nonfacedataset_dir) if is_image_file(x)]
-
-        self.face_transform = Compose([ToTensor()])
-        self.nonface_transform = Compose([RandomCrop(144),ToTensor()])
+        self.transform = Compose([ToTensor()])
 
     def __getitem__(self, index):
-        resultimage = 0
-        label = 0
-        if index < len(self.face_image_filenames):
-            resultimage = self.face_transform(Image.open(self.face_image_filenames[index]).convert('L'))
-            label = torch.ones(1)
-        else:
-            resultimage = self.nonface_transform(Image.open(self.nonface_image_filenames[index - len(self.face_image_filenames)]))
-            label = torch.zeros(1)
+        c = random.randint(10)
+        clist, label = self.filelist[c]
+        resultimage = self.transform(Image.open(clist[index]).convert('L'))
 
         return resultimage, label
 
     def __len__(self):
-        return len(self.face_image_filenames) + len(self.nonface_image_filenames)
-
+        return  self.lensum
 
 
 def train():
-    train_set = DatasetFromfolder('./data/1', './data/0') #폴더 내에 있는 0하고 1안에 있는 사진들을 들고오기
+    train_set = DatasetFromfolder('./data/1', './data/0')
     val_set = DatasetFromfolder('./data1/1', './data1/0')
     train_loader = DataLoader(dataset=train_set, num_workers=0, batch_size=64, shuffle=True)
     val_loader = DataLoader(dataset=val_set, num_workers=0, batch_size=1, shuffle=True)
@@ -170,10 +172,12 @@ def train():
                 for val_face, val_label in val_loader:
                     val_out = netD(val_face)
                     Val_loss = criterion(val_out, val_label)
-                    print('Epoch [{}/{}], BatchStep[{}/{}], Loss: {}'.format(epoch, NUM_EPOCHS, batch_idx, batch_size, Val_loss))
+                    print('Epoch [{}/{}], BatchStep[{}/{}], Loss: {}'.format(epoch, NUM_EPOCHS, batch_idx, batch_size,
+                                                                             Val_loss))
             batch_idx += 1
 
         torch.save(netD.state_dict(), 'param/netD_epoch_%d.pth' % (epoch))
+
 
 def test(img):
     print("test session")
@@ -195,7 +199,7 @@ def test(img):
 
     net.eval()
 
-    trans = Compose([Resize([144,144]),ToTensor()])
+    trans = Compose([Resize([144, 144]), ToTensor()])
     img.convert("L")
 
     img = trans(img).unsqueeze(1)
@@ -208,6 +212,7 @@ def test(img):
 
     return output[0]
 
+
 if __name__ == "__main__":
-    #train()
+    # train()
     test()
