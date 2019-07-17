@@ -8,7 +8,7 @@ import torchvision
 
 NUM_EPOCHS = 100
 def train():
-    train_set = DatasetFromfolder('C:/Users/Administrator/Downloads/mnist_png-master/mnist_png-master/mnist_png.tar/mnist_png/training')
+    train_set = DatasetFromfolder('./4주차/mnist_png.tar/mnist_png/training')
     train_loader = DataLoader(dataset=train_set, num_workers=0, batch_size=16, shuffle=True)
 
     netG = Generator()
